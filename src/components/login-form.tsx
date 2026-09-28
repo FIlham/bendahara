@@ -10,8 +10,6 @@ import {
     FieldLabel,
     FieldSeparator,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { DollarSign, GalleryVerticalEndIcon } from "lucide-react"
 
 export function LoginForm({
     className,
@@ -27,11 +25,11 @@ export function LoginForm({
                             href="#"
                             className="flex flex-col items-center gap-2 font-medium"
                         >
-                            <div className="flex size-8 items-center justify-center rounded-md">
-                                <DollarSign className="size-6" />
+                            <div className="flex size-10 items-center justify-center rounded-full bg-foreground">
+                                <img src="https://iconlogovector.com/uploads/images/2024/02/lg-65dbaf4508057-Universitas-Airlangga.webp" alt="logo" />
                             </div>
                         </a>
-                        <h1 className="text-xl font-bold">2026B M.I - Universitas Airlangga</h1>
+                        <h1 className="text-xl font-bold">2026B D4 M.I - Universitas Airlangga</h1>
                         <FieldDescription>
                             Silahkan masuk dengan akun mahasiswa.
                         </FieldDescription>
