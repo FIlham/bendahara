@@ -96,6 +96,7 @@ function Kas() {
     const [selectedId, setSelectedId] = useState(loaded.selectedId);
     const [stats, setStats] = useState(loaded.stats);
     const [status, setStatus] = useState(loaded.status);
+    const [memberQuery, setMemberQuery] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [formError, setFormError] = useState("");
@@ -112,6 +113,16 @@ function Kas() {
     const [closeReason, setCloseReason] = useState("");
 
     const isActive = stats.periode.status === "aktif";
+
+    const filteredStatus = useMemo(() => {
+        const q = memberQuery.trim().toLocaleLowerCase("id-ID");
+        if (!q) return status;
+        return status.filter((member) =>
+            [member.name, member.email, member.id].some((value) =>
+                value.toLocaleLowerCase("id-ID").includes(q),
+            ),
+        );
+    }, [memberQuery, status]);
 
     // Live search penyetor dari daftar loader (tanpa request DB per ketikan).
     const selectedDepositor = loaded.users.find((u) => u.id === depositor) ?? null;
@@ -319,7 +330,7 @@ function Kas() {
 
             <Section
                 title="Status iuran anggota"
-                description="Setiap minggu berdiri sendiri — setoran minggu lalu tidak terbawa."
+                description="Setoran melunasi tunggakan dari minggu paling awal. Kelebihan pembayaran menjadi saldo untuk minggu berikutnya."
                 aside={
                     <PeriodeSelect
                         value={selectedId}
@@ -328,6 +339,18 @@ function Kas() {
                     />
                 }
             >
+                <div className="mb-4 max-w-md">
+                    <label htmlFor="kas-member-search" className="mb-1.5 block text-sm font-medium text-foreground">Cari anggota</label>
+                    <input
+                        id="kas-member-search"
+                        type="search"
+                        value={memberQuery}
+                        onChange={(event) => setMemberQuery(event.target.value)}
+                        placeholder="Nama, NIM, atau email…"
+                        autoComplete="off"
+                        className={darkInputClass}
+                    />
+                </div>
                 <div className={tableShell}>
                     <table className={tableClass}>
                         <caption className="sr-only">Status iuran kas per anggota</caption>
@@ -341,8 +364,8 @@ function Kas() {
                             </tr>
                         </thead>
                         <tbody>
-                            {status.length === 0 && <EmptyRow colSpan={5}>Belum ada anggota terdaftar.</EmptyRow>}
-                            {status.map((member) => {
+                            {filteredStatus.length === 0 && <EmptyRow colSpan={5}>{status.length === 0 ? "Belum ada anggota terdaftar." : "Tidak ada anggota yang cocok."}</EmptyRow>}
+                            {filteredStatus.map((member) => {
                                 const target = stats.nominalKas;
                                 const collected = Math.max(0, target - member.kurang);
                                 const statusLabel = member.kurang === 0

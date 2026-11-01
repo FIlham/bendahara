@@ -488,9 +488,8 @@ export interface UserKasStatus {
 }
 
 /**
- * Status iuran per user, direset tiap periode (tanpa carry-over):
- * setiap minggu berdiri sendiri — target = nominal periode tersebut,
- * terkumpul = total setor user pada periode tersebut.
+ * Alokasi pembayaran per anggota mengikuti FIFO antarperiode. Setoran
+ * terlebih dahulu melunasi kewajiban paling lama; sisa menjadi kredit.
  */
 export interface KasStatusFilter {
     periodeId?: string;
@@ -525,7 +524,6 @@ export const getUserKasStatus = createServerFn({ method: "GET" })
         if (periodeId && !scope) throw new Error("Periode tidak ditemukan");
         if (!scope) scope = allPeriods[allPeriods.length - 1];
         const scopeId = (scope as (typeof allPeriods)[number]).id;
-        const nominal = (scope as (typeof allPeriods)[number]).nominal;
 
         const users = await db
             .select({
@@ -542,9 +540,9 @@ export const getUserKasStatus = createServerFn({ method: "GET" })
                 amount: cashEntry.amount,
                 paidAt: cashEntry.paidAt,
                 method: cashEntry.method,
+                periodeId: cashEntry.periodeId,
             })
             .from(cashEntry)
-            .where(eq(cashEntry.periodeId, scopeId))
             .orderBy(asc(cashEntry.paidAt));
 
         const byUser = new Map<string, typeof payments>();
@@ -556,16 +554,38 @@ export const getUserKasStatus = createServerFn({ method: "GET" })
 
         return users.map((u) => {
             const mine = byUser.get(u.id) ?? [];
-            const totalBayar = mine.reduce((s, p) => s + p.amount, 0);
-            const kurang = Math.max(0, nominal - totalBayar);
+            const paidByPeriod = new Map<string, number>();
+            const paymentsByPeriod = new Map<string, typeof mine>();
+            for (const payment of mine) {
+                const list = paymentsByPeriod.get(payment.periodeId) ?? [];
+                list.push(payment);
+                paymentsByPeriod.set(payment.periodeId, list);
+            }
+            const debts: { id: string; remaining: number }[] = [];
+            let credit = 0;
+            for (const period of allPeriods) {
+                debts.push({ id: period.id, remaining: period.nominal });
+                credit += (paymentsByPeriod.get(period.id) ?? []).reduce((sum, p) => sum + p.amount, 0);
+                for (const debt of debts) {
+                    const applied = Math.min(debt.remaining, credit);
+                    debt.remaining -= applied;
+                    credit -= applied;
+                    paidByPeriod.set(debt.id, (paidByPeriod.get(debt.id) ?? 0) + applied);
+                    if (credit === 0) break;
+                }
+            }
+            const selectedPeriod = allPeriods.find((p) => p.id === scopeId)!;
+            const totalBayar = paidByPeriod.get(scopeId) ?? 0;
+            const kurang = Math.max(0, selectedPeriod.nominal - totalBayar);
+            const selectedPayments = paymentsByPeriod.get(scopeId) ?? [];
             return {
                 id: u.id,
                 name: u.name,
                 email: u.email,
                 kurang,
                 totalBayar,
-                lastMethod: mine.length ? mine[mine.length - 1].method : null,
-                mingguLunas: totalBayar >= nominal ? 1 : 0,
+                lastMethod: selectedPayments.length ? selectedPayments[selectedPayments.length - 1].method : null,
+                mingguLunas: totalBayar >= selectedPeriod.nominal ? 1 : 0,
                 mingguTotal: 1,
             };
         });
