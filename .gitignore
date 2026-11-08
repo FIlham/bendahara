@@ -6,6 +6,7 @@ out
 dist
 .output
 .nitro
+.vercel
 
 # tanstack plugin cache + counter runtime noise
 .tanstack

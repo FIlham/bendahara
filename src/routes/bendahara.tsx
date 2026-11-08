@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
-import { ensureBendahara } from "@/lib/auth.functions";
+import { ensureBendahara } from "@/lib/auth/functions";
 import {
   Card,
   PageHeader,

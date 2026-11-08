@@ -5,12 +5,12 @@ import {
     useRouter,
     Link,
 } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
-import { ensureSession } from "@/lib/auth.functions";
+import { authClient } from "@/lib/auth/client";
+import { ensureSession } from "@/lib/auth/functions";
 import {
     getActivePeriode,
     listPeriodes,
-} from "@/lib/periode.functions";
+} from "@/lib/server/periode";
 import {
     createLedgerEntry,
     getDashboardData,
@@ -19,7 +19,7 @@ import {
     type LedgerFilter,
     type LedgerMethod,
     type LedgerTipe,
-} from "@/lib/ledger.functions";
+} from "@/lib/server/ledger";
 import {
     Card,
     Button,

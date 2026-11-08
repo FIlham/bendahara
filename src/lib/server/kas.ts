@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import {
     and,
@@ -12,11 +12,11 @@ import {
     sql,
     type SQL,
 } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/server";
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
-import { startOfWeekWIB } from "@/lib/week";
-import { compareByNim } from "@/lib/nim";
+import { startOfWeekWIB } from "@/lib/shared/week";
+import { compareByNim } from "@/lib/shared/nim";
 import {
     CASH_METHODS,
     activityLog,
@@ -25,7 +25,8 @@ import {
     ledgerEntry,
     type CashMethod,
 } from "@/db/kas-schema";
-import { ensureKasDefaults } from "@/lib/kas-seed";
+import { ensureKasDefaults } from "@/lib/server/kas-seed";
+import type { LogChanges } from "@/lib/server/activity";
 import {
     MAX_LIST_ROWS,
     assertDateString,
@@ -35,7 +36,7 @@ import {
     assertOptionalDateString,
     assertReason,
     assertSearch,
-} from "@/lib/validate";
+} from "@/lib/shared/validate";
 import { getEnv } from "./env";
 
 export { startOfWeekWIB };
@@ -94,13 +95,7 @@ async function requireBendahara() {
     return session;
 }
 
-export type LogChange = { old: string | number | null; new: string | number | null };
-export type LogChanges = Record<string, LogChange>;
-
-export const listCashEntries = createServerFn({ method: "GET" })
-    .validator((f: CashFilter) => f ?? {})
-    .handler(async ({ data }) => {
-        await requireSession();
+export const listCashEntriesFor = createServerOnlyFn(async (data: CashFilter) => {
         const search = assertSearch(data.search);
         const method =
             data.method === undefined || data.method === "semua"
@@ -171,22 +166,26 @@ export const listCashEntries = createServerFn({ method: "GET" })
             .limit(limit);
 
         return rows;
+});
+
+export const listCashEntries = createServerFn({ method: "GET" })
+    .validator((f: CashFilter) => f ?? {})
+    .handler(async ({ data }) => {
+        await requireSession();
+        return listCashEntriesFor(data);
     });
 
 export interface CashStatsFilter {
     periodeId?: string;
 }
 
-export const getCashStats = createServerFn({ method: "GET" })
-    .validator((f: CashStatsFilter) => f ?? {})
-    .handler(async ({ data }) => {
-        const session = await requireSession();
+export const getCashStatsFor = createServerOnlyFn(async (actorId: string, data: CashStatsFilter) => {
         const { periodeId: _p, ...rest } = data;
         void _p;
         if (Object.keys(rest).length > 0) throw new Error("Filter tidak dikenal");
         const periodeId =
             typeof data.periodeId === "string" && data.periodeId ? data.periodeId : undefined;
-        const periode = await resolvePeriode(periodeId, session.user.id);
+        const periode = await resolvePeriode(periodeId, actorId);
 
         const [{ total: totalPeriode }] = await db
             .select({ total: sql<number>`coalesce(sum(${cashEntry.amount}), 0)` })
@@ -221,16 +220,27 @@ export const getCashStats = createServerFn({ method: "GET" })
             totalSemua: Number(totalSemua),
             bendaharaList,
         };
+});
+
+export const getCashStats = createServerFn({ method: "GET" })
+    .validator((f: CashStatsFilter) => f ?? {})
+    .handler(async ({ data }) => {
+        const session = await requireSession();
+        return getCashStatsFor(session.user.id, data);
     });
 
-export const listUsers = createServerFn({ method: "GET" }).handler(async () => {
-    await requireBendahara();
+export const listUsersFor = createServerOnlyFn(async () => {
     const rows = await db
         .select({ id: user.id, name: user.name, email: user.email })
         .from(user);
     // Urut NIM low-to-high (NIM = user.id string numerik).
     rows.sort(compareByNim);
     return rows;
+});
+
+export const listUsers = createServerFn({ method: "GET" }).handler(async () => {
+    await requireBendahara();
+    return listUsersFor();
 });
 
 export interface CreateCashInput {
@@ -253,10 +263,7 @@ function assertValidCashInput(input: CreateCashInput) {
     }
 }
 
-export const createCashEntry = createServerFn({ method: "POST" })
-    .validator((d: CreateCashInput) => d)
-    .handler(async ({ data }) => {
-        const session = await requireBendahara();
+export const createCashEntryFor = createServerOnlyFn(async (actorId: string, data: CreateCashInput) => {
         assertValidCashInput(data);
 
         const depositor = await db.query.user.findFirst({
@@ -273,7 +280,7 @@ export const createCashEntry = createServerFn({ method: "POST" })
             // DB fresh: seed Periode 1 (nominal 5000) + setting default.
             const { active: seeded } = active
                 ? { active }
-                : await ensureKasDefaults(session.user.id);
+                : await ensureKasDefaults(actorId);
             const periode = seeded;
             if (!periode) throw new Error("Gagal menyiapkan periode kas");
             // Kunci periode aktif agar penutupan periode tidak bisa menyela
@@ -293,7 +300,7 @@ export const createCashEntry = createServerFn({ method: "POST" })
                     amount: data.amount,
                     method: data.method,
                     paidAt: data.paidAt ? new Date(data.paidAt) : new Date(),
-                    createdBy: session.user.id,
+                    createdBy: actorId,
                     periodeId: periode.id,
                 })
                 .returning();
@@ -307,12 +314,12 @@ export const createCashEntry = createServerFn({ method: "POST" })
                 kredit: 0,
                 method: row.method === "tunai" ? "tunai" : "transfer",
                 sourceCashEntryId: row.id,
-                createdBy: session.user.id,
+                createdBy: actorId,
                 periodeId: periode.id,
             });
             await tx.insert(activityLog).values({
                 id: crypto.randomUUID(),
-                actorId: session.user.id,
+                actorId: actorId,
                 action: "create",
                 entity: "kas",
                 entityId: row.id,
@@ -326,6 +333,13 @@ export const createCashEntry = createServerFn({ method: "POST" })
             });
             return row;
         });
+});
+
+export const createCashEntry = createServerFn({ method: "POST" })
+    .validator((d: CreateCashInput) => d)
+    .handler(async ({ data }) => {
+        const session = await requireBendahara();
+        return createCashEntryFor(session.user.id, data);
     });
 
 export interface UpdateCashInput {
@@ -495,10 +509,7 @@ export interface KasStatusFilter {
     periodeId?: string;
 }
 
-export const getUserKasStatus = createServerFn({ method: "GET" })
-    .validator((f: KasStatusFilter) => f ?? {})
-    .handler(async ({ data }): Promise<UserKasStatus[]> => {
-        const session = await requireSession();
+export const getUserKasStatusFor = createServerOnlyFn(async (actorId: string, data: KasStatusFilter): Promise<UserKasStatus[]> => {
         const { periodeId: _p, ...rest } = data;
         void _p;
         if (Object.keys(rest).length > 0) throw new Error("Filter tidak dikenal");
@@ -510,7 +521,7 @@ export const getUserKasStatus = createServerFn({ method: "GET" })
             .orderBy(asc(kasPeriode.nomor));
         if (allPeriods.length === 0) {
             // DB fresh (habis migrate): seed Periode 1 + setting default.
-            await ensureKasDefaults(session.user.id);
+            await ensureKasDefaults(actorId);
             allPeriods = await db
                 .select()
                 .from(kasPeriode)
@@ -589,6 +600,13 @@ export const getUserKasStatus = createServerFn({ method: "GET" })
                 mingguTotal: 1,
             };
         });
+});
+
+export const getUserKasStatus = createServerFn({ method: "GET" })
+    .validator((f: KasStatusFilter) => f ?? {})
+    .handler(async ({ data }) => {
+        const session = await requireSession();
+        return getUserKasStatusFor(session.user.id, data);
     });
 
 export const updateNominalKas = createServerFn({ method: "POST" })

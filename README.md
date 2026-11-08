@@ -68,16 +68,29 @@ values ('240123456', 'Nama Bendahara', 'nama@gmail.com', true, 'bendahara', now(
    ```bash
    DATABASE_URL="<url-pooler-production>" bun x drizzle-kit migrate
    ```
-3. Import repo di Vercel dan isi Environment Variables (Production + Preview): `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (= domain production), `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+3. Import repo di Vercel dan isi Environment Variables (Production + Preview): `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (= domain production), `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (opsional `API_KEY`, `API_ACTOR_ID` untuk bot).
 4. Di Google Cloud Console, tambahkan redirect URI production: `https://<domain-anda>/api/auth/callback/google`.
 5. Deploy, lalu smoke test: login → catat kas → ubah ledger → tutup periode → periksa `/log`.
+
+## API untuk bot / AI agent
+
+API JSON tersedia di `/api/v1` (opt-in). Isi `API_KEY` dan `API_ACTOR_ID` di environment; tanpa keduanya endpoint menjawab 503. Bot memanggil dengan:
+
+```bash
+curl -H "Authorization: Bearer $API_KEY" "https://<domain>/api/v1/overview"
+```
+
+- Baca: `GET /overview`, `/users`, `/kas`, `/kas/status`, `/ledger`, `/periode`.
+- Tulis (actor harus bendahara): `POST /kas`, `POST /ledger`.
+- `GET /api/v1/` mengembalikan daftar endpoint + parameter.
+- Semua aksi tulis tetap masuk `activity_log` dan memakai validasi yang sama dengan web. Tidak ada endpoint edit/hapus/tutup periode.
 
 ## Struktur singkat
 
 - `src/routes/` — halaman (`index.tsx` dashboard, `kas.tsx`, `log.tsx`, `bendahara.tsx`, `login.tsx`).
-- `src/lib/*.functions.ts` — server functions (kas, ledger, periode, activity, auth guards).
-- `src/lib/validate.ts` — validasi runtime input server functions.
-- `src/lib/env.ts` — validasi environment wajib saat startup.
+- `src/lib/server/` — server functions (kas, ledger, periode, activity), seed, dan env.
+- `src/lib/shared/` — helper murni (validasi runtime, minggu WIB, urutan NIM).
+- `src/lib/auth/` — konfigurasi Better Auth, client, dan guard sesi.
 - `src/db/` — skema database (`kas-schema.ts` ditulis manual, `auth-schema.ts` hasil generate — jangan edit manual) dan koneksi pool.
 - `drizzle/` — file migrasi yang ter-commit; jalankan di production secara terencana.
 - `vercel.json` — deklarasi framework `tanstack-start` untuk deploy.

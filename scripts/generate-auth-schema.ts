@@ -4,7 +4,7 @@
 // config under Node (via jiti), where the `bun:sqlite` import in src/db
 // fails. This runs the CLI's own drizzle generator under Bun instead —
 // same code path, same output.
-import { auth } from "../src/lib/auth";
+import { auth } from "../src/lib/auth/server";
 
 const [chunk] = [
   ...new Bun.Glob("generators-*.mjs").scanSync(

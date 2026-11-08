@@ -7,13 +7,13 @@ import {
     useRouter,
     useRouterState,
 } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
-import { ensureSession } from "@/lib/auth.functions";
+import { authClient } from "@/lib/auth/client";
+import { ensureSession } from "@/lib/auth/functions";
 import {
     closeAndOpenPeriode,
     getActivePeriode,
     listPeriodes,
-} from "@/lib/periode.functions";
+} from "@/lib/server/periode";
 import {
     createCashEntry,
     getCashStats,
@@ -21,7 +21,7 @@ import {
     listUsers,
     updateNominalKas,
     type CashMethod,
-} from "@/lib/kas.functions";
+} from "@/lib/server/kas";
 import {
     Button,
     EmptyRow,

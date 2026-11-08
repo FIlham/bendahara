@@ -14,8 +14,9 @@ import {
 export function LoginForm({
     className,
     signIn,
+    error,
     ...props
-}: React.ComponentProps<"div"> & { signIn: () => Promise<void> }) {
+}: React.ComponentProps<"div"> & { signIn: () => Promise<void>; error?: string | null }) {
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <form>
@@ -45,6 +46,11 @@ export function LoginForm({
                             Continue with Google
                         </Button>
                     </Field>
+                    {error && (
+                        <p role="alert" className="text-center text-sm text-destructive">
+                            {error}
+                        </p>
+                    )}
                 </FieldGroup>
             </form>
         </div>

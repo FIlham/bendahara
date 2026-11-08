@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
-import { ensureSession } from "@/lib/auth.functions";
+import { authClient } from "@/lib/auth/client";
+import { ensureSession } from "@/lib/auth/functions";
 import {
   listActivityLogs,
   type ActivityFilter,
-} from "@/lib/activity.functions";
+} from "@/lib/server/activity";
 import {
   Button,
   EmptyRow,

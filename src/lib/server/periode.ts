@@ -1,7 +1,7 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { desc, eq, sql } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/server";
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
 import {
@@ -13,10 +13,10 @@ import {
   DEFAULT_NOMINAL_KAS,
   NOMINAL_KAS_KEY,
 } from "@/db/kas-schema";
-import { ensureKasDefaults } from "@/lib/kas-seed";
-import { compareByNim } from "@/lib/nim";
-import { assertReason } from "@/lib/validate";
-import type { LogChanges } from "@/lib/kas.functions";
+import { ensureKasDefaults } from "@/lib/server/kas-seed";
+import { compareByNim } from "@/lib/shared/nim";
+import { assertReason } from "@/lib/shared/validate";
+import type { LogChanges } from "@/lib/server/activity";
 
 async function requireSession() {
   const session = await auth.api.getSession({
@@ -42,12 +42,16 @@ export interface PeriodeInfo {
   closedAt: Date | null;
 }
 
+export const listPeriodesFor = createServerOnlyFn(async (actorId: string): Promise<PeriodeInfo[]> => {
+  // DB fresh (habis migrate): seed Periode 1 + setting default.
+  await ensureKasDefaults(actorId);
+  return db.select().from(kasPeriode).orderBy(desc(kasPeriode.nomor));
+});
+
 export const listPeriodes = createServerFn({ method: "GET" }).handler(
-  async (): Promise<PeriodeInfo[]> => {
+  async () => {
     const session = await requireSession();
-    // DB fresh (habis migrate): seed Periode 1 + setting default.
-    await ensureKasDefaults(session.user.id);
-    return db.select().from(kasPeriode).orderBy(desc(kasPeriode.nomor));
+    return listPeriodesFor(session.user.id);
   },
 );
 

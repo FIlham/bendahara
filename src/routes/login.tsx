@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
-import { getSession } from "@/lib/auth.functions";
+import { useState } from "react";
+import { authClient } from "@/lib/auth/client";
+import { getSession } from "@/lib/auth/functions";
 import { LoginForm } from "@/components/login-form";
 
 export const Route = createFileRoute("/login")({
@@ -14,15 +15,26 @@ export const Route = createFileRoute("/login")({
 });
 
 function Login() {
+    const [error, setError] = useState<string | null>(null);
+
     const signIn = async () => {
-        const data = await authClient.signIn.social({
-            provider: "google",
-        });
+        setError(null);
+        try {
+            const result = await authClient.signIn.social({
+                provider: "google",
+                callbackURL: "/",
+            });
+            if (result.error) {
+                setError(result.error.message || "Permintaan login Google gagal.");
+            }
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Permintaan login Google gagal.");
+        }
     };
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
             <div className="w-full max-w-sm">
-                <LoginForm signIn={signIn} />
+                <LoginForm signIn={signIn} error={error} />
             </div>
         </div>
     )

@@ -1,12 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { desc, eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/server";
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
 import { activityLog, type ActivityEntity } from "@/db/kas-schema";
-import { assertEnum, assertLimit } from "@/lib/validate";
-import type { LogChanges } from "@/lib/kas.functions";
+import { assertEnum, assertLimit } from "@/lib/shared/validate";
+
+/** Bentuk `activity_log.changes` (JSON) — dipakai semua modul yang menulis log. */
+export type LogChange = { old: string | number | null; new: string | number | null };
+export type LogChanges = Record<string, LogChange>;
 
 async function requireSession() {
   const session = await auth.api.getSession({

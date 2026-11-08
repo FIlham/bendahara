@@ -1,10 +1,13 @@
 import { Elysia } from 'elysia'
 import { treaty } from '@elysia/eden'
+import { publicApi } from '@/lib/server/api'
 
 import { createFileRoute } from '@tanstack/react-router'
 import { createIsomorphicFn } from '@tanstack/react-start'
 
-const app = new Elysia({ prefix: '/api' }).get('/', 'Hello Elysia!')
+const app = new Elysia({ prefix: '/api' })
+    .use(publicApi)
+    .get('/', { message: "hello, world!" })
 
 const handle = ({ request }: { request: Request }) => app.fetch(request)
 

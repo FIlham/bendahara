@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import {
   and,
@@ -11,7 +11,7 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth/server";
 import { db } from "@/db";
 import { user } from "@/db/auth-schema";
 import {
@@ -23,9 +23,9 @@ import {
   type LedgerMethod,
   type LedgerTipe,
 } from "@/db/kas-schema";
-import type { LogChanges } from "@/lib/kas.functions";
-import { ensureKasDefaults } from "@/lib/kas-seed";
-import { startOfWeekWIB } from "@/lib/week";
+import type { LogChanges } from "@/lib/server/activity";
+import { ensureKasDefaults } from "@/lib/server/kas-seed";
+import { startOfWeekWIB } from "@/lib/shared/week";
 import {
   MAX_LIST_ROWS,
   assertDateString,
@@ -35,7 +35,7 @@ import {
   assertOptionalDateString,
   assertReason,
   assertSearch,
-} from "@/lib/validate";
+} from "@/lib/shared/validate";
 
 async function requireSession() {
   const session = await auth.api.getSession({
@@ -95,10 +95,7 @@ export interface LedgerRow {
   saldo: number;
 }
 
-export const listLedgerEntries = createServerFn({ method: "GET" })
-  .validator((f: LedgerFilter) => f ?? {})
-  .handler(async ({ data }): Promise<LedgerRow[]> => {
-    await requireSession();
+export const listLedgerEntriesFor = createServerOnlyFn(async (data: LedgerFilter): Promise<LedgerRow[]> => {
     const search = assertSearch(data.search);
     const tipe =
       data.tipe === undefined || data.tipe === "semua"
@@ -163,6 +160,13 @@ export const listLedgerEntries = createServerFn({ method: "GET" })
       };
     });
     return sort === "desc" ? withSaldo.reverse() : withSaldo;
+});
+
+export const listLedgerEntries = createServerFn({ method: "GET" })
+  .validator((f: LedgerFilter) => f ?? {})
+  .handler(async ({ data }) => {
+    await requireSession();
+    return listLedgerEntriesFor(data);
   });
 
 export interface DashboardData {
@@ -180,16 +184,13 @@ export interface DashboardFilter {
   periodeId?: string;
 }
 
-export const getDashboardData = createServerFn({ method: "GET" })
-  .validator((f: DashboardFilter) => f ?? {})
-  .handler(async ({ data }): Promise<DashboardData> => {
-    const session = await requireSession();
+export const getDashboardDataFor = createServerOnlyFn(async (actorId: string, data: DashboardFilter): Promise<DashboardData> => {
     const { periodeId: _p, ...rest } = data;
     void _p;
     if (Object.keys(rest).length > 0) throw new Error("Filter tidak dikenal");
     const periodeId =
       typeof data.periodeId === "string" && data.periodeId ? data.periodeId : undefined;
-    const periode = await resolvePeriode(periodeId, session.user.id);
+    const periode = await resolvePeriode(periodeId, actorId);
 
     const [{ masuk = 0, keluar = 0 }] = await db
       .select({
@@ -230,6 +231,13 @@ export const getDashboardData = createServerFn({ method: "GET" })
       userCount: Number(count),
       bendaharaList,
     };
+});
+
+export const getDashboardData = createServerFn({ method: "GET" })
+  .validator((f: DashboardFilter) => f ?? {})
+  .handler(async ({ data }) => {
+    const session = await requireSession();
+    return getDashboardDataFor(session.user.id, data);
   });
 
 export interface CreateLedgerInput {
@@ -241,10 +249,7 @@ export interface CreateLedgerInput {
   reason: string;
 }
 
-export const createLedgerEntry = createServerFn({ method: "POST" })
-  .validator((d: CreateLedgerInput) => d)
-  .handler(async ({ data }) => {
-    const session = await requireBendahara();
+export const createLedgerEntryFor = createServerOnlyFn(async (actorId: string, data: CreateLedgerInput) => {
     const keterangan = assertKeterangan(data.keterangan);
     const tipe = assertEnum(data.tipe, LEDGER_TIPES, "Tipe");
     const method = assertEnum(data.method, LEDGER_METHODS, "Metode");
@@ -264,7 +269,7 @@ export const createLedgerEntry = createServerFn({ method: "POST" })
       // DB fresh: seed Periode 1 (nominal 5000) + setting default.
       const { active: seeded } = active
         ? { active }
-        : await ensureKasDefaults(session.user.id);
+        : await ensureKasDefaults(actorId);
       if (!seeded) throw new Error("Gagal menyiapkan periode kas");
       // Kunci periode aktif agar penutupan periode tidak bisa menyela
       // antara pemilihan periode dan insert.
@@ -286,13 +291,13 @@ export const createLedgerEntry = createServerFn({ method: "POST" })
           kredit: tipe === "keluar" ? amount : 0,
           method,
           sourceCashEntryId: null,
-          createdBy: session.user.id,
+          createdBy: actorId,
           periodeId: seeded.id,
         })
         .returning();
       await tx.insert(activityLog).values({
         id: crypto.randomUUID(),
-        actorId: session.user.id,
+        actorId: actorId,
         action: "create",
         entity: "ledger",
         entityId: row.id,
@@ -307,6 +312,13 @@ export const createLedgerEntry = createServerFn({ method: "POST" })
       });
       return row;
     });
+});
+
+export const createLedgerEntry = createServerFn({ method: "POST" })
+  .validator((d: CreateLedgerInput) => d)
+  .handler(async ({ data }) => {
+    const session = await requireBendahara();
+    return createLedgerEntryFor(session.user.id, data);
   });
 
 export interface UpdateLedgerInput {

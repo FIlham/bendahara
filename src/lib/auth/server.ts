@@ -2,9 +2,9 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { eq } from "drizzle-orm";
-import { db } from "../db";
-import * as schema from "../db/auth-schema";
-import { getEnv, assertServerEnv } from "./env";
+import { db } from "@/db";
+import * as schema from "@/db/auth-schema";
+import { getEnv, assertServerEnv } from "@/lib/server/env";
 
 // Gagal cepat dengan pesan jelas bila secret/URL belum diset di Vercel.
 assertServerEnv();

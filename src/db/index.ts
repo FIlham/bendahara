@@ -2,7 +2,7 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as authSchema from "./auth-schema";
 import * as kasSchema from "./kas-schema";
-import { getEnv } from "@/lib/env";
+import { getEnv } from "@/lib/server/env";
 
 const pool = new Pool({
     connectionString: getEnv("DATABASE_URL"),
