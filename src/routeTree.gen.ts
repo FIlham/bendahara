@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BendaharaRouteImport } from './routes/bendahara'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as KasRouteImport } from './routes/kas'
 import { Route as LogRouteImport } from './routes/log'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as KasBayarRouteImport } from './routes/kas/bayar'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -26,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const BendaharaRoute = BendaharaRouteImport.update({
   id: '/bendahara',
   path: '/bendahara',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KasRoute = KasRouteImport.update({
@@ -48,6 +55,11 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KasBayarRoute = KasBayarRouteImport.update({
   id: '/bayar',
   path: '/bayar',
@@ -62,20 +74,24 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bendahara': typeof BendaharaRoute
+  '/chat': typeof ChatRoute
   '/kas': typeof KasRouteWithChildren
   '/log': typeof LogRoute
   '/login': typeof LoginRoute
   '/api/$': typeof ApiSplatRoute
+  '/api/chat': typeof ApiChatRoute
   '/kas/bayar': typeof KasBayarRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bendahara': typeof BendaharaRoute
+  '/chat': typeof ChatRoute
   '/kas': typeof KasRouteWithChildren
   '/log': typeof LogRoute
   '/login': typeof LoginRoute
   '/api/$': typeof ApiSplatRoute
+  '/api/chat': typeof ApiChatRoute
   '/kas/bayar': typeof KasBayarRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -83,10 +99,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/bendahara': typeof BendaharaRoute
+  '/chat': typeof ChatRoute
   '/kas': typeof KasRouteWithChildren
   '/log': typeof LogRoute
   '/login': typeof LoginRoute
   '/api/$': typeof ApiSplatRoute
+  '/api/chat': typeof ApiChatRoute
   '/kas/bayar': typeof KasBayarRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -95,30 +113,36 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/bendahara'
+    | '/chat'
     | '/kas'
     | '/log'
     | '/login'
     | '/api/$'
+    | '/api/chat'
     | '/kas/bayar'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/bendahara'
+    | '/chat'
     | '/kas'
     | '/log'
     | '/login'
     | '/api/$'
+    | '/api/chat'
     | '/kas/bayar'
     | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/bendahara'
+    | '/chat'
     | '/kas'
     | '/log'
     | '/login'
     | '/api/$'
+    | '/api/chat'
     | '/kas/bayar'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
@@ -126,10 +150,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BendaharaRoute: typeof BendaharaRoute
+  ChatRoute: typeof ChatRoute
   KasRoute: typeof KasRouteWithChildren
   LogRoute: typeof LogRoute
   LoginRoute: typeof LoginRoute
   ApiSplatRoute: typeof ApiSplatRoute
+  ApiChatRoute: typeof ApiChatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -147,6 +173,13 @@ declare module '@tanstack/react-router' {
       path: '/bendahara'
       fullPath: '/bendahara'
       preLoaderRoute: typeof BendaharaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kas': {
@@ -175,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/api/$'
       fullPath: '/api/$'
       preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kas/bayar': {
@@ -207,10 +247,12 @@ const KasRouteWithChildren = KasRoute._addFileChildren(KasRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BendaharaRoute: BendaharaRoute,
+  ChatRoute: ChatRoute,
   KasRoute: KasRouteWithChildren,
   LogRoute: LogRoute,
   LoginRoute: LoginRoute,
   ApiSplatRoute: ApiSplatRoute,
+  ApiChatRoute: ApiChatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

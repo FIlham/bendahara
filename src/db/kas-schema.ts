@@ -187,3 +187,14 @@ export const activityLog = pgTable("activity_log", {
 ]);
 
 export type ActivityEntity = "kas" | "nominal" | "ledger" | "periode";
+
+/**
+ * Penghitung kuota chatbot AI (jendela tetap). Key: "u:<userId>:5m" atau
+ * "global:day"; baris dipakai ulang sehingga jumlahnya terbatas
+ * (2 per user + 1 global) tanpa perlu pembersihan.
+ */
+export const aiRateLimit = pgTable("ai_rate_limit", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  count: integer("count").notNull(),
+});

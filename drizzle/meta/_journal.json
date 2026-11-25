@@ -57,6 +57,13 @@
       "when": 1790556775227,
       "tag": "0007_amusing_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794748024488,
+      "tag": "0008_shallow_black_bolt",
+      "breakpoints": true
     }
   ]
 }

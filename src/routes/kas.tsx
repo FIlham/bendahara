@@ -289,6 +289,7 @@ function Kas() {
                 <Link to="/" className={navClass}>Dashboard</Link>
                 <Link to="/kas/bayar" className="rounded-full bg-[#ff6680] px-4 py-2 text-button-sm font-semibold text-[#24151a] transition-colors hover:bg-[#ff8197] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6680]/50">Bayar iuran</Link>
                 <Link to="/log" className={navClass}>Log</Link>
+                <Link to="/chat" className={navClass}>AI</Link>
             </nav>
 
             <header className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">

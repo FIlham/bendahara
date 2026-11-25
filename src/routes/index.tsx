@@ -301,6 +301,7 @@ function Dashboard() {
                 <div className="flex flex-wrap items-center gap-1">
                     <Link to="/kas" className={navClass}>Kas</Link>
                     <Link to="/log" className={navClass}>Log</Link>
+                    <Link to="/chat" className={navClass}>AI</Link>
                     {isBendahara && <Link to="/bendahara" className={navClass}>Bendahara</Link>}
                 </div>
             </nav>

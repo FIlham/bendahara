@@ -37,6 +37,9 @@ function Bendahara() {
             <Link to="/log" className={navClass}>
               Log
             </Link>
+            <Link to="/chat" className={navClass}>
+              AI
+            </Link>
           </>
         }
       />

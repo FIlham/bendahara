@@ -130,6 +130,7 @@ function Log() {
         <span className="mr-auto text-caption-sm text-muted-foreground">{session?.user.email} ({role})</span>
         <Link to="/" className={navClass}>Dashboard</Link>
         <Link to="/kas" className={navClass}>Kas</Link>
+        <Link to="/chat" className={navClass}>AI</Link>
       </nav>
 
       <header className="mb-8 sm:mb-10">
